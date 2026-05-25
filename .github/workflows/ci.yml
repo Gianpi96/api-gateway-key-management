@@ -29,10 +29,10 @@ jobs:
       - name: Run tests
         run: pytest -v --tb=short
         env:
-          DATABASE_URL: sqlite+aiosqlite:///:memory:
-          REDIS_URL: redis://localhost:6379
-          STRIPE_WEBHOOK_SECRET: whsec_test
-          GROQ_API_KEY: gsk_test
+          DATABASE_URL: "sqlite+aiosqlite:///:memory:"
+          REDIS_URL: "redis://localhost:6379"
+          STRIPE_WEBHOOK_SECRET: "whsec_test"
+          GROQ_API_KEY: "gsk_test"
 
   build:
     name: Docker build
