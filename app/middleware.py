@@ -12,6 +12,8 @@ _EXEMPT_POST = {"/gateway/keys", "/webhooks/stripe"}
 
 
 def _is_exempt(method: str, path: str) -> bool:
+    if method == "OPTIONS":
+        return True  # CORS preflight — always let CORSMiddleware handle it
     if method == "GET" and (
         path in _EXEMPT_EXACT_GET or path.startswith(_EXEMPT_PREFIXES)
     ):
