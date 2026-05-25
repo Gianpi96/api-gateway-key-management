@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 
 import redis.asyncio as aioredis
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from app.config import get_settings
@@ -43,6 +44,13 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# CORS — permette al frontend su porta 5500 (e a qualsiasi origin in dev) di chiamare il backend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 app.add_middleware(ApiKeyMiddleware)
 app.include_router(keys.router)
 app.include_router(webhooks.router)

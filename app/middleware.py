@@ -46,8 +46,12 @@ class ApiKeyMiddleware(BaseHTTPMiddleware):
                 media_type="application/json",
             )
 
-        limiter = RateLimiter(request.app.state.redis)
-        allowed, _ = await limiter.is_allowed(api_key.id, api_key.tier)
+        try:
+            limiter = RateLimiter(request.app.state.redis)
+            allowed, _ = await limiter.is_allowed(api_key.id, api_key.tier)
+        except Exception:
+            # Redis non disponibile → fail-open (non bloccare la richiesta)
+            allowed = True
 
         if not allowed:
             return Response(
