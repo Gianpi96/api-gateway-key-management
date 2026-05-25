@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>API Gateway — Test Dashboard</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #0f1117;
+      --surface:  #1a1d27;
+      --border:   #2a2d3e;
+      --accent:   #6c63ff;
+      --accent2:  #00d4aa;
+      --danger:   #ff4757;
+      --warn:     #ffa502;
+      --text:     #e2e8f0;
+      --muted:    #64748b;
+      --radius:   10px;
+      --mono:     'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      min-height: 100vh;
+      padding: 2rem 1rem;
+    }
+
+    header {
+      max-width: 960px;
+      margin: 0 auto 2rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    header h1 { font-size: 1.5rem; font-weight: 700; }
+    header p  { color: var(--muted); font-size: .85rem; margin-top: .2rem; }
+
+    .badge {
+      display: inline-block;
+      padding: .25rem .6rem;
+      border-radius: 999px;
+      font-size: .7rem;
+      font-weight: 600;
+      background: var(--accent);
+      color: #fff;
+    }
+
+    main {
+      max-width: 960px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+
+    @media (max-width: 680px) { main { grid-template-columns: 1fr; } }
+
+    /* ── Card ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+    }
+    .card h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+    }
+    .card h2 .icon { font-size: 1.1rem; }
+
+    /* ── Form elements ── */
+    label {
+      display: block;
+      font-size: .78rem;
+      color: var(--muted);
+      margin-bottom: .3rem;
+      margin-top: .9rem;
+    }
+    label:first-of-type { margin-top: 0; }
+
+    input, select, textarea {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      padding: .55rem .75rem;
+      font-size: .875rem;
+      font-family: inherit;
+      outline: none;
+      transition: border-color .15s;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--accent);
+    }
+    textarea { resize: vertical; min-height: 70px; font-family: var(--mono); font-size: .8rem; }
+
+    button {
+      margin-top: 1rem;
+      width: 100%;
+      padding: .65rem 1rem;
+      border: none;
+      border-radius: 6px;
+      background: var(--accent);
+      color: #fff;
+      font-size: .875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity .15s, transform .1s;
+    }
+    button:hover  { opacity: .88; }
+    button:active { transform: scale(.98); }
+    button:disabled { opacity: .4; cursor: not-allowed; }
+
+    button.danger { background: var(--danger); }
+    button.success { background: var(--accent2); color: #0f1117; }
+
+    /* ── Response box ── */
+    .response {
+      margin-top: 1rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: .75rem 1rem;
+      font-family: var(--mono);
+      font-size: .78rem;
+      white-space: pre-wrap;
+      word-break: break-all;
+      min-height: 56px;
+      color: var(--text);
+      max-height: 260px;
+      overflow-y: auto;
+    }
+    .response.ok     { border-color: var(--accent2); color: var(--accent2); }
+    .response.err    { border-color: var(--danger);  color: var(--danger); }
+    .response.warn   { border-color: var(--warn);    color: var(--warn); }
+    .response.empty  { color: var(--muted); }
+
+    /* ── Key store bar ── */
+    .key-store {
+      grid-column: 1 / -1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .key-store span { font-size: .78rem; color: var(--muted); white-space: nowrap; }
+    .key-store code {
+      flex: 1;
+      font-family: var(--mono);
+      font-size: .78rem;
+      color: var(--accent2);
+      word-break: break-all;
+    }
+    .key-store .id-badge {
+      font-size: .75rem;
+      padding: .2rem .5rem;
+      border-radius: 4px;
+      background: var(--border);
+      color: var(--text);
+      white-space: nowrap;
+    }
+
+    /* ── Tier badges ── */
+    .tier-free       { color: var(--muted); }
+    .tier-pro        { color: var(--accent); }
+    .tier-enterprise { color: var(--accent2); }
+
+    /* ── Usage bar ── */
+    .usage-bar-wrap { margin-top: .5rem; }
+    .usage-bar-label { font-size: .72rem; color: var(--muted); display: flex; justify-content: space-between; margin-bottom: .25rem; }
+    .usage-bar { height: 6px; background: var(--border); border-radius: 999px; overflow: hidden; }
+    .usage-bar-fill { height: 100%; background: var(--accent); border-radius: 999px; transition: width .4s; }
+    .usage-bar-fill.warn  { background: var(--warn); }
+    .usage-bar-fill.full  { background: var(--danger); }
+
+    /* ── Spinner ── */
+    .spin {
+      display: inline-block;
+      width: 14px; height: 14px;
+      border: 2px solid #fff4;
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .6s linear infinite;
+      vertical-align: middle;
+      margin-right: .4rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Log ── */
+    #log-card { grid-column: 1 / -1; }
+    #log { max-height: 200px; overflow-y: auto; }
+    .log-line { display: flex; gap: .75rem; font-size: .75rem; padding: .2rem 0; border-bottom: 1px solid var(--border); }
+    .log-time { color: var(--muted); white-space: nowrap; }
+    .log-method { font-weight: 700; width: 3rem; }
+    .log-status { width: 2.5rem; text-align: right; }
+    .log-url  { color: var(--text); flex: 1; word-break: break-all; }
+    .s2xx { color: var(--accent2); }
+    .s4xx { color: var(--warn); }
+    .s5xx { color: var(--danger); }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>API Gateway <span class="badge">v1.0</span></h1>
+    <p>Test dashboard — nessuna dipendenza esterna, solo fetch() verso <code id="base-display">http://localhost:8000</code></p>
+  </div>
+</header>
+
+<main>
+
+  <!-- ── Base URL bar ── -->
+  <div class="key-store" style="grid-column:1/-1; margin-bottom:-.5rem;">
+    <span>Base URL</span>
+    <input id="base-url" value="http://localhost:8000" style="flex:1;margin:0;" />
+    <button onclick="checkHealth()" style="width:auto;margin:0;padding:.5rem 1rem;">Health check</button>
+    <span id="health-dot" style="font-size:1.2rem;">⚪</span>
+  </div>
+
+  <!-- ── Active key store ── -->
+  <div class="key-store">
+    <span>API Key attiva</span>
+    <code id="active-key">—</code>
+    <span class="id-badge">ID: <span id="active-id">—</span></span>
+    <span class="id-badge" id="active-tier">tier: —</span>
+  </div>
+
+  <!-- ──────────────────────────────────────────
+       CARD 1: Crea chiave
+  ────────────────────────────────────────── -->
+  <div class="card">
+    <h2><span class="icon">🔑</span> Crea API Key</h2>
+
+    <label>User ID</label>
+    <input id="create-user" value="alice" placeholder="alice" />
+
+    <label>Tier</label>
+    <select id="create-tier">
+      <option value="free">free — 100 req/giorno</option>
+      <option value="pro">pro — 10 000 req/giorno</option>
+      <option value="enterprise">enterprise — illimitato</option>
+    </select>
+
+    <button onclick="createKey()">POST /gateway/keys</button>
+
+    <div class="response empty" id="create-resp">La chiave apparirà qui…</div>
+  </div>
+
+  <!-- ──────────────────────────────────────────
+       CARD 2: Statistiche utilizzo
+  ────────────────────────────────────────── -->
+  <div class="card">
+    <h2><span class="icon">📊</span> Statistiche utilizzo</h2>
+
+    <label>Key ID (auto-compilato dalla chiave attiva)</label>
+    <input id="usage-id" placeholder="1" />
+
+    <label>X-API-Key (auto-compilata)</label>
+    <input id="usage-key" placeholder="gw_…" />
+
+    <button onclick="getUsage()">GET /gateway/keys/{id}/usage</button>
+
+    <div class="response empty" id="usage-resp">Statistiche qui…</div>
+    <div class="usage-bar-wrap" id="bar-wrap" style="display:none;">
+      <div class="usage-bar-label">
+        <span>Utilizzo oggi</span>
+        <span id="bar-label">0 / 100</span>
+      </div>
+      <div class="usage-bar"><div class="usage-bar-fill" id="bar-fill" style="width:0%"></div></div>
+    </div>
+  </div>
+
+  <!-- ──────────────────────────────────────────
+       CARD 3: Chat Groq
+  ────────────────────────────────────────── -->
+  <div class="card">
+    <h2><span class="icon">🤖</span> Chat — Groq llama-3.3-70b</h2>
+
+    <label>X-API-Key (auto-compilata)</label>
+    <input id="chat-key" placeholder="gw_…" />
+
+    <label>Messaggio</label>
+    <textarea id="chat-msg" rows="3">Spiega il rate limiting in una frase.</textarea>
+
+    <button onclick="sendChat()">POST /api/v1/chat</button>
+
+    <div class="response empty" id="chat-resp">La risposta LLM apparirà qui…</div>
+  </div>
+
+  <!-- ──────────────────────────────────────────
+       CARD 4: Webhook Stripe simulato
+  ────────────────────────────────────────── -->
+  <div class="card">
+    <h2><span class="icon">💳</span> Stripe Webhook (simulato)</h2>
+
+    <label>User ID da aggiornare</label>
+    <input id="wh-user" value="alice" />
+
+    <label>Evento</label>
+    <select id="wh-event">
+      <option value="checkout.session.completed">checkout.session.completed (upgrade)</option>
+      <option value="customer.subscription.deleted">customer.subscription.deleted (downgrade)</option>
+    </select>
+
+    <label>Nuovo tier (per upgrade)</label>
+    <select id="wh-tier">
+      <option value="pro">pro</option>
+      <option value="enterprise">enterprise</option>
+      <option value="free">free</option>
+    </select>
+
+    <p style="font-size:.72rem;color:var(--warn);margin-top:.75rem;">
+      ⚠️ La firma Stripe non sarà valida — il server risponderà 400 a meno che non
+      abbiate impostato <code>STRIPE_WEBHOOK_SECRET=whsec_test_secret</code> e il
+      server non usi bypass. Usate la <strong>Stripe CLI</strong> per test reali.
+    </p>
+
+    <button class="danger" onclick="sendWebhook()">POST /webhooks/stripe</button>
+
+    <div class="response empty" id="wh-resp">Risposta webhook qui…</div>
+  </div>
+
+  <!-- ──────────────────────────────────────────
+       LOG
+  ────────────────────────────────────────── -->
+  <div class="card" id="log-card">
+    <h2><span class="icon">📋</span> Request log</h2>
+    <div class="response" id="log" style="max-height:200px;font-size:.75rem;">
+      <div style="color:var(--muted)">Nessuna richiesta ancora…</div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+  // ── Utilities ──────────────────────────────────────────────────────────
+  const base = () => document.getElementById('base-url').value.replace(/\/$/, '');
+
+  function setResp(id, text, cls = '') {
+    const el = document.getElementById(id);
+    el.textContent = text;
+    el.className = 'response ' + (cls || '');
+  }
+
+  function setLoading(id, label = 'Caricamento…') {
+    const el = document.getElementById(id);
+    el.innerHTML = `<span class="spin"></span>${label}`;
+    el.className = 'response';
+  }
+
+  function addLog(method, url, status) {
+    const log = document.getElementById('log');
+    const placeholder = log.querySelector('[style]');
+    if (placeholder) placeholder.remove();
+
+    const cls = status >= 500 ? 's5xx' : status >= 400 ? 's4xx' : 's2xx';
+    const time = new Date().toLocaleTimeString('it-IT');
+    const line = document.createElement('div');
+    line.className = 'log-line';
+    line.innerHTML = `
+      <span class="log-time">${time}</span>
+      <span class="log-method">${method}</span>
+      <span class="log-url">${url}</span>
+      <span class="log-status ${cls}">${status}</span>`;
+    log.prepend(line);
+  }
+
+  async function apiFetch(method, path, body, headers = {}) {
+    const url = base() + path;
+    const opts = { method, headers: { 'Content-Type': 'application/json', ...headers } };
+    if (body) opts.body = JSON.stringify(body);
+    const res = await fetch(url, opts);
+    const data = await res.json().catch(() => ({}));
+    addLog(method, path, res.status);
+    return { ok: res.ok, status: res.status, data };
+  }
+
+  function autoFill() {
+    const key = document.getElementById('active-key').textContent;
+    const id  = document.getElementById('active-id').textContent;
+    if (key !== '—') {
+      document.getElementById('usage-key').value = key;
+      document.getElementById('chat-key').value  = key;
+    }
+    if (id !== '—') {
+      document.getElementById('usage-id').value = id;
+    }
+  }
+
+  // ── Health ─────────────────────────────────────────────────────────────
+  async function checkHealth() {
+    const dot = document.getElementById('health-dot');
+    dot.textContent = '🟡';
+    try {
+      const res = await fetch(base() + '/health');
+      dot.textContent = res.ok ? '🟢' : '🔴';
+    } catch {
+      dot.textContent = '🔴';
+    }
+  }
+
+  // ── Create key ─────────────────────────────────────────────────────────
+  async function createKey() {
+    setLoading('create-resp', 'Creazione chiave…');
+    try {
+      const { ok, data } = await apiFetch('POST', '/gateway/keys', {
+        user_id: document.getElementById('create-user').value.trim() || 'user',
+        tier:    document.getElementById('create-tier').value,
+      });
+
+      if (ok) {
+        document.getElementById('active-key').textContent  = data.key;
+        document.getElementById('active-id').textContent   = data.id;
+        document.getElementById('active-tier').textContent = 'tier: ' + data.tier;
+        document.getElementById('wh-user').value           = data.user_id;
+        autoFill();
+
+        setResp('create-resp', JSON.stringify(data, null, 2), 'ok');
+      } else {
+        setResp('create-resp', JSON.stringify(data, null, 2), 'err');
+      }
+    } catch (e) {
+      setResp('create-resp', '❌ ' + e.message + '\n\nAssicurati che il server sia in esecuzione.', 'err');
+    }
+  }
+
+  // ── Usage ──────────────────────────────────────────────────────────────
+  async function getUsage() {
+    const id  = document.getElementById('usage-id').value.trim();
+    const key = document.getElementById('usage-key').value.trim();
+    if (!id || !key) { setResp('usage-resp', '⚠️ Compila ID e API Key.', 'warn'); return; }
+
+    setLoading('usage-resp', 'Recupero statistiche…');
+    try {
+      const { ok, data } = await apiFetch('GET', `/gateway/keys/${id}/usage`, null, { 'X-API-Key': key });
+
+      if (ok) {
+        setResp('usage-resp', JSON.stringify(data, null, 2), 'ok');
+
+        const wrap = document.getElementById('bar-wrap');
+        const fill = document.getElementById('bar-fill');
+        const lbl  = document.getElementById('bar-label');
+        wrap.style.display = 'block';
+
+        if (data.rate_limit_today === null) {
+          lbl.textContent = `${data.calls_today} / ∞ (enterprise)`;
+          fill.style.width = '5%';
+          fill.className = 'usage-bar-fill';
+        } else {
+          const pct = Math.min(100, (data.calls_today / data.rate_limit_today) * 100);
+          lbl.textContent = `${data.calls_today} / ${data.rate_limit_today}`;
+          fill.style.width = pct + '%';
+          fill.className = 'usage-bar-fill' + (pct >= 100 ? ' full' : pct >= 80 ? ' warn' : '');
+        }
+      } else {
+        setResp('usage-resp', JSON.stringify(data, null, 2), 'err');
+      }
+    } catch (e) {
+      setResp('usage-resp', '❌ ' + e.message, 'err');
+    }
+  }
+
+  // ── Chat ───────────────────────────────────────────────────────────────
+  async function sendChat() {
+    const key = document.getElementById('chat-key').value.trim();
+    const msg = document.getElementById('chat-msg').value.trim();
+    if (!key) { setResp('chat-resp', '⚠️ Imposta prima l\'API Key (crea una chiave).', 'warn'); return; }
+    if (!msg) { setResp('chat-resp', '⚠️ Scrivi un messaggio.', 'warn'); return; }
+
+    setLoading('chat-resp', 'Attendo risposta Groq…');
+    try {
+      const { ok, data } = await apiFetch('POST', '/api/v1/chat', { message: msg }, { 'X-API-Key': key });
+      setResp('chat-resp', ok ? JSON.stringify(data, null, 2) : JSON.stringify(data, null, 2), ok ? 'ok' : 'err');
+    } catch (e) {
+      setResp('chat-resp', '❌ ' + e.message, 'err');
+    }
+  }
+
+  // ── Stripe webhook ─────────────────────────────────────────────────────
+  async function sendWebhook() {
+    const userId = document.getElementById('wh-user').value.trim();
+    const evType = document.getElementById('wh-event').value;
+    const tier   = document.getElementById('wh-tier').value;
+
+    let eventObj;
+    if (evType === 'checkout.session.completed') {
+      eventObj = {
+        type: evType,
+        data: { object: { client_reference_id: userId, metadata: { tier } } },
+      };
+    } else {
+      eventObj = {
+        type: evType,
+        data: { object: { metadata: { user_id: userId } } },
+      };
+    }
+
+    setLoading('wh-resp', 'Invio evento Stripe…');
+    try {
+      // Firma invalida → il server risponde 400 (comportamento atteso senza Stripe CLI)
+      const { ok, status, data } = await apiFetch(
+        'POST', '/webhooks/stripe', eventObj,
+        { 'stripe-signature': 'test_invalid_sig' }
+      );
+      const cls = status === 400 ? 'warn' : ok ? 'ok' : 'err';
+      const note = status === 400
+        ? '// 400 atteso: firma non valida.\n// Usa la Stripe CLI per firme reali.\n\n'
+        : '';
+      setResp('wh-resp', note + JSON.stringify(data, null, 2), cls);
+    } catch (e) {
+      setResp('wh-resp', '❌ ' + e.message, 'err');
+    }
+  }
+
+  // ── Init ───────────────────────────────────────────────────────────────
+  document.getElementById('base-url').addEventListener('change', () => {
+    document.getElementById('base-display').textContent =
+      document.getElementById('base-url').value;
+  });
+  checkHealth();
+</script>
+</body>
+</html>
