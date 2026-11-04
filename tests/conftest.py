@@ -39,6 +39,7 @@ async def db_session(test_engine):
 async def mock_redis():
     m = AsyncMock()
     m.incr.return_value = 1
+    m.get.return_value = None
     m.expire.return_value = True
     return m
 
