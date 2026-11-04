@@ -6,8 +6,13 @@ from app.models import TierEnum
 
 
 class ApiKeyCreate(BaseModel):
+    """New keys are always created on the free tier.
+
+    Paid tiers are granted only by the verified Stripe webhook, so the client
+    cannot choose a tier here (any ``tier`` field in the body is ignored).
+    """
+
     user_id: str
-    tier: TierEnum = TierEnum.free
 
 
 class ApiKeyResponse(BaseModel):

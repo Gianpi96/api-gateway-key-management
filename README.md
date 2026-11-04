@@ -1,11 +1,17 @@
 # API Gateway with Billing
 
-[![CI](https://github.com/your-org/api-gateway-key-management/actions/workflows/ci.yml/badge.svg)](https://github.com/your-org/api-gateway-key-management/actions/workflows/ci.yml)
+[![CI](https://github.com/Gianpi96/api-gateway-key-management/actions/workflows/ci.yml/badge.svg)](https://github.com/Gianpi96/api-gateway-key-management/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.14-blue)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688)](https://fastapi.tiangolo.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-Production-grade API Gateway built with FastAPI. Handles key provisioning, per-tier rate limiting via Redis, and automatic billing tier updates through Stripe webhooks.
+FastAPI gateway that issues API keys (stored only as SHA-256 hashes), enforces daily rate limits per plan with Redis (free 100, pro 10,000, enterprise unlimited) and updates the customer's plan automatically from verified Stripe webhooks.
+
+**Stack:** FastAPI, PostgreSQL, Redis, Stripe, Docker Compose.
+
+> Demo project. Run `docker compose up --build` and open `/docs`.
+
+Handles key provisioning, per-tier rate limiting via Redis, and automatic billing tier updates through Stripe webhooks.
 
 ---
 
@@ -72,8 +78,6 @@ curl http://localhost:8000/health
 The API is now live at `http://localhost:8000`.  
 Interactive docs: `http://localhost:8000/docs`
 
-> **Railway deploy:** `https://api-gateway.up.railway.app` *(replace with your URL)*
-
 ---
 
 ## Rate Limiting
@@ -92,10 +96,12 @@ Counters use `INCR` + `EXPIRE 86400`. A new key is created each UTC day.
 
 ### Create API Key (public)
 
+New keys are **always created on the `free` tier**. A client cannot choose its tier: paid tiers are granted only by the signature-verified Stripe webhook (see below), so a plan cannot be obtained without paying. Any `tier` field sent in the body is ignored.
+
 ```bash
 curl -X POST http://localhost:8000/gateway/keys \
   -H "Content-Type: application/json" \
-  -d '{"user_id": "alice", "tier": "free"}'
+  -d '{"user_id": "alice"}'
 ```
 
 ```json
@@ -210,7 +216,7 @@ tests/test_webhooks.py::test_checkout_completed_upgrades_tier PASSED
 
 ### Why Redis for rate limiting instead of PostgreSQL counters?
 
-PostgreSQL `UPDATE ... SET calls_today = calls_today + 1` under concurrent load creates row-level lock contention and requires a round-trip per request. Redis `INCR` is atomic, O(1), and designed for exactly this pattern. At 10 000 req/day per pro user, PostgreSQL would survive — but Redis lets the gateway stay sub-millisecond even at 10 000 req/minute for enterprise.
+PostgreSQL `UPDATE ... SET calls_today = calls_today + 1` under concurrent load creates row-level lock contention and requires a round-trip per request. Redis `INCR` is atomic and designed for exactly this pattern, so the per-request check stays cheap. The live daily counter therefore lives only in Redis (`rate_limit:{key_id}:{date}`), and `GET /gateway/keys/{id}/usage` reads `calls_today` from there. The `calls_today` / `calls_this_month` columns in PostgreSQL are a fallback when Redis is unavailable; monthly aggregation is not implemented yet. Enterprise keys are not counted because they have no limit.
 
 ### Why middleware instead of a FastAPI dependency?
 

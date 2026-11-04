@@ -15,7 +15,7 @@ def generate_api_key() -> tuple[str, str]:
 
 
 async def create_api_key(
-    db: AsyncSession, user_id: str, tier: TierEnum
+    db: AsyncSession, user_id: str, tier: TierEnum = TierEnum.free
 ) -> tuple[ApiKey, str]:
     raw_key, key_hash = generate_api_key()
     api_key = ApiKey(key_hash=key_hash, user_id=user_id, tier=tier.value)

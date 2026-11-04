@@ -29,3 +29,8 @@ class RateLimiter:
             await self.redis.expire(redis_key, 86_400)
 
         return count <= limit, count
+
+    async def get_count(self, key_id: int) -> int:
+        """Today's number of calls for this key, read from Redis (0 if none yet)."""
+        value = await self.redis.get(f"rate_limit:{key_id}:{date.today().isoformat()}")
+        return int(value) if value else 0
